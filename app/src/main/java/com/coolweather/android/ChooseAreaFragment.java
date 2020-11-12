@@ -10,6 +10,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -101,10 +102,10 @@ public class ChooseAreaFragment extends Fragment {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 if(currentLevel == LEVEL_PROVINCE){
                     selectedProvince = provinceList.get(position);
-                    //
+                    queryCities();
                 }else if(currentLevel == LEVEL_CITY){
                     selectedCity = cityList.get(position);
-                    //
+                    queryCounties();
                 }
             }
         });
@@ -112,9 +113,9 @@ public class ChooseAreaFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 if(currentLevel ==LEVEL_COUNTY){
-                    //
+                    queryCities();
                 }else if(currentLevel == LEVEL_CITY){
-                    //
+                    queryProvinces();
                 }
             }
         });
@@ -137,7 +138,7 @@ public class ChooseAreaFragment extends Fragment {
             currentLevel = LEVEL_PROVINCE;
         }else{
             String address = "http://guolin.tech/api/china";
-            //
+            queryFromServer(address,"province");
         }
     }
 
@@ -159,7 +160,7 @@ public class ChooseAreaFragment extends Fragment {
         }else{
             int provinceCode = selectedProvince.getProvinceCode();
             String address ="http://guolin.tech/api/china/"+ provinceCode;
-            //
+            queryFromServer(address,"city");
         }
     }
 
@@ -182,7 +183,7 @@ public class ChooseAreaFragment extends Fragment {
             int provinceCode = selectedProvince.getProvinceCode();
             int cityCode = selectedCity.getCityCode();
             String address = "http://guolin.tech/api/china/"+ provinceCode +"/"+cityCode;
-            //
+            queryFromServer(address,"county");
         }
     }
 
@@ -190,11 +191,18 @@ public class ChooseAreaFragment extends Fragment {
      * 根据传入的地址和类型从服务器上查询省市县数据
      */
     private void queryFromServer(String address,final String type){
-        //
+        showProgressDialog();
         HttpUtil.sendOkHttpRequest(address, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-
+                //通过runOnUiThread（）方法回到主线程处理逻辑
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        closeProgressDialog();
+                        Toast.makeText(getContext(),"加载失败",Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
 
             @Override
@@ -212,12 +220,39 @@ public class ChooseAreaFragment extends Fragment {
                     getActivity().runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            
+                            closeProgressDialog();
+                            if("province".equals(type)){
+                                queryProvinces();
+                            }else if("city".equals(type)){
+                                queryCities();
+                            }else if("county".equals(type)){
+                                queryCounties();
+                            }
                         }
                     });
                 }
             }
         });
+    }
+    /**
+     * 显示进度对话框
+     */
+    private void showProgressDialog(){
+        if(progressDialog == null){
+            progressDialog = new ProgressDialog(getActivity());
+            progressDialog.setMessage("正在加载中...");
+            progressDialog.setCanceledOnTouchOutside(false);
+        }
+        progressDialog.show();
+    }
+
+    /**
+     * 关闭进度对话框
+     */
+    private void closeProgressDialog(){
+        if(progressDialog != null){
+            progressDialog.dismiss();
+        }
     }
 }
 
